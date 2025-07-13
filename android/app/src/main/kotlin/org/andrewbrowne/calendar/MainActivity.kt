@@ -1,0 +1,5 @@
+package org.andrewbrowne.calendar
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
