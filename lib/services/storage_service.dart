@@ -55,4 +55,31 @@ class StorageService {
   static bool isLoggedIn() {
     return getAccessToken() != null;
   }
+
+  // Remember Me functionality
+  static Future<void> saveCredentials(String email, String password) async {
+    await _prefs.setString('saved_email', email);
+    await _prefs.setString('saved_password', password);
+  }
+
+  static String? getSavedEmail() {
+    return _prefs.getString('saved_email');
+  }
+
+  static String? getSavedPassword() {
+    return _prefs.getString('saved_password');
+  }
+
+  static Future<void> clearCredentials() async {
+    await _prefs.remove('saved_email');
+    await _prefs.remove('saved_password');
+  }
+
+  static Future<void> setRememberMe(bool value) async {
+    await _prefs.setBool('remember_me', value);
+  }
+
+  static bool getRememberMe() {
+    return _prefs.getBool('remember_me') ?? false;
+  }
 }

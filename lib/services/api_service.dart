@@ -205,11 +205,44 @@ class ApiService {
   Future<List<Calendar>> getCalendars() async {
     try {
       final response = await _dio.get(Constants.calendars);
-      return (response.data as List)
-          .map((json) => Calendar.fromJson(json))
-          .toList();
+      
+      print('Calendar API Response: ${response.statusCode}');
+      print('Calendar Response data: ${response.data}');
+      print('Calendar Response data type: ${response.data.runtimeType}');
+      
+      // Handle null or empty response
+      if (response.data == null) {
+        print('Calendar response data is null, returning empty list');
+        return [];
+      }
+      
+      // Handle different response formats
+      if (response.data is List) {
+        final List<dynamic> dataList = response.data as List;
+        return dataList.map((json) => Calendar.fromJson(json)).toList();
+      } else if (response.data is Map) {
+        // Check if it's a paginated response
+        final Map<String, dynamic> dataMap = response.data as Map<String, dynamic>;
+        if (dataMap.containsKey('results')) {
+          final List<dynamic> results = dataMap['results'] as List? ?? [];
+          return results.map((json) => Calendar.fromJson(json)).toList();
+        } else if (dataMap.containsKey('data')) {
+          final List<dynamic> data = dataMap['data'] as List? ?? [];
+          return data.map((json) => Calendar.fromJson(json)).toList();
+        }
+      }
+      
+      print('Unexpected calendar response format, returning empty list');
+      return [];
+      
     } on DioException catch (e) {
+      print('DioException fetching calendars: ${e.message}');
+      print('Calendar error response: ${e.response?.data}');
+      print('Calendar error status code: ${e.response?.statusCode}');
       throw _handleError(e);
+    } catch (e) {
+      print('Unexpected error fetching calendars: $e');
+      throw 'Failed to load calendars. Please try again.';
     }
   }
 
@@ -293,14 +326,41 @@ class ApiService {
       
       print('API Response: ${response.statusCode}');
       print('Response data: ${response.data}');
+      print('Response data type: ${response.data.runtimeType}');
       
-      return (response.data as List)
-          .map((json) => Event.fromJson(json))
-          .toList();
+      // Handle null or empty response
+      if (response.data == null) {
+        print('Response data is null, returning empty list');
+        return [];
+      }
+      
+      // Handle different response formats
+      if (response.data is List) {
+        final List<dynamic> dataList = response.data as List;
+        return dataList.map((json) => Event.fromJson(json)).toList();
+      } else if (response.data is Map) {
+        // Check if it's a paginated response
+        final Map<String, dynamic> dataMap = response.data as Map<String, dynamic>;
+        if (dataMap.containsKey('results')) {
+          final List<dynamic> results = dataMap['results'] as List? ?? [];
+          return results.map((json) => Event.fromJson(json)).toList();
+        } else if (dataMap.containsKey('data')) {
+          final List<dynamic> data = dataMap['data'] as List? ?? [];
+          return data.map((json) => Event.fromJson(json)).toList();
+        }
+      }
+      
+      print('Unexpected response format, returning empty list');
+      return [];
+      
     } on DioException catch (e) {
-      print('Error fetching events: ${e.message}');
+      print('DioException fetching events: ${e.message}');
       print('Error response: ${e.response?.data}');
+      print('Error status code: ${e.response?.statusCode}');
       throw _handleError(e);
+    } catch (e) {
+      print('Unexpected error fetching events: $e');
+      throw 'Failed to load events. Please try again.';
     }
   }
 
@@ -390,11 +450,43 @@ class ApiService {
         queryParameters: queryParams,
       );
       
-      return (response.data as List)
-          .map((json) => Goal.fromJson(json))
-          .toList();
+      print('Goals API Response: ${response.statusCode}');
+      print('Goals Response data: ${response.data}');
+      print('Goals Response data type: ${response.data.runtimeType}');
+      
+      // Handle null or empty response
+      if (response.data == null) {
+        print('Goals response data is null, returning empty list');
+        return [];
+      }
+      
+      // Handle different response formats
+      if (response.data is List) {
+        final List<dynamic> dataList = response.data as List;
+        return dataList.map((json) => Goal.fromJson(json)).toList();
+      } else if (response.data is Map) {
+        // Check if it's a paginated response
+        final Map<String, dynamic> dataMap = response.data as Map<String, dynamic>;
+        if (dataMap.containsKey('results')) {
+          final List<dynamic> results = dataMap['results'] as List? ?? [];
+          return results.map((json) => Goal.fromJson(json)).toList();
+        } else if (dataMap.containsKey('data')) {
+          final List<dynamic> data = dataMap['data'] as List? ?? [];
+          return data.map((json) => Goal.fromJson(json)).toList();
+        }
+      }
+      
+      print('Unexpected goals response format, returning empty list');
+      return [];
+      
     } on DioException catch (e) {
+      print('DioException fetching goals: ${e.message}');
+      print('Goals error response: ${e.response?.data}');
+      print('Goals error status code: ${e.response?.statusCode}');
       throw _handleError(e);
+    } catch (e) {
+      print('Unexpected error fetching goals: $e');
+      throw 'Failed to load goals. Please try again.';
     }
   }
 
@@ -521,9 +613,52 @@ class ApiService {
     }
   }
 
+  // Test connectivity to the API
+  Future<bool> testConnection() async {
+    try {
+      print('Testing connection to: ${Constants.baseUrl}/api/');
+      final response = await _dio.get('/api/', options: Options(
+        receiveTimeout: const Duration(seconds: 10),
+        sendTimeout: const Duration(seconds: 10),
+      ));
+      print('Connection test response: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Connection test failed: $e');
+      return false;
+    }
+  }
+
   String _handleError(DioException e) {
+    print('DioException details:');
+    print('Type: ${e.type}');
+    print('Message: ${e.message}');
+    print('Response: ${e.response}');
+    print('Response status: ${e.response?.statusCode}');
+    print('Response data: ${e.response?.data}');
+    print('Request options: ${e.requestOptions.path}');
+    
     if (e.response != null) {
       final data = e.response!.data;
+      final statusCode = e.response!.statusCode;
+      
+      // Handle specific HTTP status codes
+      switch (statusCode) {
+        case 401:
+          return 'Authentication failed. Please login again.';
+        case 403:
+          return 'Access denied. You don\'t have permission to access this resource.';
+        case 404:
+          return 'The requested resource was not found.';
+        case 500:
+          return 'Server error. Please try again later.';
+        case 502:
+        case 503:
+        case 504:
+          return 'Server is temporarily unavailable. Please try again later.';
+      }
+      
+      // Handle response data
       if (data is Map && data.containsKey('error')) {
         return data['error'];
       }
@@ -533,15 +668,28 @@ class ApiService {
       if (data is String) {
         return data;
       }
+      
+      return 'Server returned an error (${statusCode}). Please try again.';
     }
     
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
+        return 'Connection timeout. Please check your internet connection and try again.';
       case DioExceptionType.sendTimeout:
+        return 'Request timeout. Please check your internet connection and try again.';
       case DioExceptionType.receiveTimeout:
-        return 'Connection timeout. Please check your internet connection.';
+        return 'Response timeout. Please check your internet connection and try again.';
       case DioExceptionType.connectionError:
-        return 'Connection error. Please check your internet connection.';
+        return 'Cannot connect to server. Please check your internet connection and try again.';
+      case DioExceptionType.badCertificate:
+        return 'SSL certificate error. Please check your connection.';
+      case DioExceptionType.cancel:
+        return 'Request was cancelled.';
+      case DioExceptionType.unknown:
+        if (e.message?.contains('SocketException') == true) {
+          return 'No internet connection. Please check your network and try again.';
+        }
+        return 'Network error occurred. Please check your connection and try again.';
       default:
         return 'An unexpected error occurred. Please try again.';
     }

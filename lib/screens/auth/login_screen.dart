@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/storage_service.dart';
+import '../../services/biometric_service.dart';
 import 'register_screen.dart';
 import '../home/home_screen.dart';
 
@@ -16,6 +18,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _rememberMe = false;
+  bool _biometricAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+    _checkBiometricAvailability();
+  }
 
   @override
   void dispose() {
@@ -24,19 +35,80 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
-      final success = await authProvider.login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+  Future<void> _loadSavedCredentials() async {
+    final savedEmail = StorageService.getSavedEmail();
+    final savedPassword = StorageService.getSavedPassword();
+    final rememberMe = StorageService.getRememberMe();
+    
+    if (rememberMe && savedEmail != null && savedPassword != null) {
+      setState(() {
+        _emailController.text = savedEmail;
+        _passwordController.text = savedPassword;
+        _rememberMe = true;
+      });
+    }
+  }
 
+  Future<void> _checkBiometricAvailability() async {
+    final isAvailable = await BiometricService.isBiometricAvailable();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = isAvailable;
+      });
+    }
+  }
+
+  Future<void> _authenticateWithBiometrics() async {
+    final savedEmail = StorageService.getSavedEmail();
+    final savedPassword = StorageService.getSavedPassword();
+    
+    if (savedEmail == null || savedPassword == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please login with credentials first to enable biometric login'),
+        ),
+      );
+      return;
+    }
+
+    final authenticated = await BiometricService.authenticateWithBiometrics();
+    
+    if (authenticated) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final success = await authProvider.login(savedEmail, savedPassword);
+      
       if (success && mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
+      }
+    }
+  }
+
+  Future<void> _login() async {
+    if (_formKey.currentState!.validate()) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      
+      final success = await authProvider.login(email, password);
+
+      if (success) {
+        // Save credentials if Remember Me is checked
+        if (_rememberMe) {
+          await StorageService.saveCredentials(email, password);
+          await StorageService.setRememberMe(true);
+        } else {
+          await StorageService.clearCredentials();
+          await StorageService.setRememberMe(false);
+        }
+        
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        }
       }
     }
   }
@@ -75,6 +147,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autofocus: true,
                     decoration: const InputDecoration(
                       labelText: 'Email',
                       hintText: 'Enter your email',
@@ -95,6 +169,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _login(),
                     decoration: InputDecoration(
                       labelText: 'Password',
                       hintText: 'Enter your password',
@@ -118,7 +194,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _rememberMe,
+                        onChanged: (value) {
+                          setState(() {
+                            _rememberMe = value ?? false;
+                          });
+                        },
+                      ),
+                      const Text('Remember Me'),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {
+                          // TODO: Implement forgot password
+                        },
+                        child: const Text('Forgot Password?'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   Consumer<AuthProvider>(
                     builder: (context, authProvider, child) {
                       if (authProvider.error != null) {
@@ -160,14 +257,32 @@ class _LoginScreenState extends State<LoginScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      // TODO: Implement forgot password
-                    },
-                    child: const Text('Forgot Password?'),
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
+                  if (_biometricAvailable && _rememberMe)
+                    Column(
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _authenticateWithBiometrics,
+                          icon: const Icon(Icons.fingerprint),
+                          label: const Text('Login with Biometrics'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Row(
+                          children: [
+                            Expanded(child: Divider()),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Text('OR'),
+                            ),
+                            Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

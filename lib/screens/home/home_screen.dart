@@ -255,7 +255,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             title: Text(
               event.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                decoration: event.completed ? TextDecoration.lineThrough : null,
+                color: event.completed ? Colors.grey : null,
+              ),
+            ),
+            trailing: Checkbox(
+              value: event.completed,
+              onChanged: (value) {
+                final calendarProvider = Provider.of<CalendarProvider>(context, listen: false);
+                calendarProvider.toggleEventCompletion(event);
+              },
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

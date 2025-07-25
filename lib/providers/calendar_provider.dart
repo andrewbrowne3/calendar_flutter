@@ -88,6 +88,13 @@ class CalendarProvider extends ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
+      
+      // Test connection first
+      final connectionOk = await _apiService.testConnection();
+      if (!connectionOk) {
+        throw 'Cannot connect to server. Please check your internet connection.';
+      }
+      
       _calendars = await _apiService.getCalendars();
       if (_calendars.isNotEmpty && _selectedCalendar == null) {
         _selectedCalendar = _calendars.first;
@@ -279,5 +286,50 @@ class CalendarProvider extends ChangeNotifier {
 
   void clearError() {
     _setError(null);
+  }
+
+  Future<void> toggleEventCompletion(Event event) async {
+    try {
+      final index = _events.indexWhere((e) => e.id == event.id);
+      if (index != -1) {
+        // Update the completed status locally first for immediate UI feedback
+        final updatedEvent = Event(
+          id: event.id,
+          calendar: event.calendar,
+          calendarId: event.calendarId,
+          creator: event.creator,
+          title: event.title,
+          description: event.description,
+          location: event.location,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          allDay: event.allDay,
+          status: event.status,
+          color: event.color,
+          recurrenceRule: event.recurrenceRule,
+          recurrenceEndDate: event.recurrenceEndDate,
+          recurrenceCount: event.recurrenceCount,
+          recurrenceInterval: event.recurrenceInterval,
+          url: event.url,
+          isPrivate: event.isPrivate,
+          duration: event.duration,
+          attendees: event.attendees,
+          reminders: event.reminders,
+          completed: !event.completed,
+          createdAt: event.createdAt,
+          updatedAt: event.updatedAt,
+        );
+        
+        _events[index] = updatedEvent;
+        notifyListeners();
+        
+        // Update on the server
+        await updateEvent(event.id, {'completed': !event.completed});
+      }
+    } catch (e) {
+      // If server update fails, revert the local change
+      await loadEvents();
+      _setError(e.toString());
+    }
   }
 }

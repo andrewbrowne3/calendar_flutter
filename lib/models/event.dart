@@ -23,6 +23,7 @@ class Event {
   final Duration? duration;
   final List<EventAttendee>? attendees;
   final List<EventReminder>? reminders;
+  final bool completed;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -48,6 +49,7 @@ class Event {
     this.duration,
     this.attendees,
     this.reminders,
+    this.completed = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -83,6 +85,7 @@ class Event {
       reminders: json['reminders'] != null
           ? (json['reminders'] as List).map((r) => EventReminder.fromJson(r)).toList()
           : null,
+      completed: json['completed'] ?? false,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -105,6 +108,7 @@ class Event {
       'recurrence_interval': recurrenceInterval,
       'url': url,
       'is_private': isPrivate,
+      'completed': completed,
     };
   }
 }

@@ -1,5 +1,8 @@
 class Constants {
-  static const String baseUrl = 'https://calendar.andrewbrowne.org';
+  // TODO: Change back to https://calendar.andrewbrowne.org when DNS is configured
+  static const String baseUrl = 'http://10.0.2.2:8000'; // Android emulator localhost
+  // static const String baseUrl = 'http://localhost:8000'; // iOS simulator
+  // static const String baseUrl = 'https://calendar.andrewbrowne.org'; // Production
   static const String authUrl = '$baseUrl/api/auth';
   
   // Storage keys

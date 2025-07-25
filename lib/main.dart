@@ -5,7 +5,7 @@ import 'providers/auth_provider.dart';
 import 'providers/calendar_provider.dart';
 import 'providers/goal_provider.dart';
 import 'providers/responsibility_provider.dart';
-import 'screens/auth/login_screen.dart';
+import 'screens/auth/auto_login_screen.dart';
 import 'screens/main_screen.dart';
 
 void main() async {
@@ -52,13 +52,7 @@ class CalendarApp extends StatelessWidget {
             ),
           ),
         ),
-        home: Consumer<AuthProvider>(
-          builder: (context, authProvider, child) {
-            return authProvider.isAuthenticated 
-                ? const MainScreen() 
-                : const LoginScreen();
-          },
-        ),
+        home: const AutoLoginScreen(),
         debugShowCheckedModeBanner: false,
       ),
     );
